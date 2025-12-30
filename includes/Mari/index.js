@@ -270,6 +270,11 @@ module.exports = function(loginData, options, callback) {
                 api.getThemePictures = require("./src/getThemePictures")(api.defaultFuncs || api._defaultFuncs || api, api, api.ctx || api._ctx || {});
             } catch(e) {
                 console.error("Failed to load getThemePictures:", e);
+            
+            try {
+                api.setThreadTheme = require("./src/setThreadTheme")(api.defaultFuncs || api._defaultFuncs || api, api, api.ctx || api._ctx || {});
+            } catch(e) {
+                console.error("Failed to load setThreadTheme:", e);
             }
 
             return callback(null, api);
@@ -277,4 +282,4 @@ module.exports = function(loginData, options, callback) {
     } catch(e) { 
         console.log(e); 
     }
-}; // ← এটা অবশ্যই দরকার, module.exports function এর শেষের }
+}; // ← creadit change korle xhud@ hobe  (rX_abdullah007) 
