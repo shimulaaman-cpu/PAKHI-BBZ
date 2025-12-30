@@ -1,62 +1,53 @@
 "use strict";
 
 const log = require("npmlog");
-const { parseAndCheckLogin } = require("../../utils/client");
-const { getType } = require("../../utils/format");
+const utils = require("../utils"); // pull getType, etc. from your utils
+
 module.exports = function (defaultFuncs, api, ctx) {
   return function getThemePictures(id, callback) {
-    let resolveFunc = function () { };
-    let rejectFunc = function () { };
-    const returnPromise = new Promise(function (resolve, reject) {
-      resolveFunc = resolve;
-      rejectFunc = reject;
-    });
-
-    if (!callback) {
-      if (
-        getType(callback) == "Function" ||
-        getType(callback) == "AsyncFunction"
-      ) {
-        callback = callback;
-      } else {
-        callback = function (err, data) {
-          if (err) {
-            return rejectFunc(err);
-          }
-          resolveFunc(data);
-        };
-      }
-    }
-
-    if (getType(id) != "String") {
-      id = "";
-    }
+    if (utils.getType(id) !== "String") id = "";
 
     const form = {
       fb_api_caller_class: "RelayModern",
       fb_api_req_friendly_name: "MWPThreadThemeProviderQuery",
       doc_id: "9734829906576883",
       server_timestamps: true,
-      variables: JSON.stringify({
-        id
-      }),
-      av: ctx.userID
+      variables: JSON.stringify({ id }),
+      av: ctx.userID,
     };
-    defaultFuncs
-      .post("https://www.facebook.com/api/graphql/", ctx.jar, form)
-      .then(parseAndCheckLogin(ctx, defaultFuncs))
-      .then(function (resData) {
-        if (resData.errors) {
-          throw resData;
-        }
 
-        return callback(null, resData);
-      })
-      .catch(function (err) {
-        log.error("getThemePictures", err);
-        return callback(err);
+    // Promise mode if no callback provided
+    if (!callback || utils.getType(callback) !== "Function") {
+      return new Promise((resolve, reject) => {
+        defaultFuncs
+          .post("https://www.facebook.com/api/graphql/", ctx.jar, form)
+          .then((res) => res) // replace parseAndCheckLogin if needed
+          .then((resData) => {
+            if (resData.errors) return reject(resData);
+            resolve(resData);
+          })
+          .catch((err) => {
+            log.error("getThemePictures", err);
+            reject(err);
+          });
       });
+    }
 
-    return returnPromise;
+    // Callback mode
+    try {
+      defaultFuncs
+        .post("https://www.facebook.com/api/graphql/", ctx.jar, form)
+        .then((res) => res) // replace parseAndCheckLogin if needed
+        .then((resData) => {
+          if (resData.errors) return callback(resData);
+          callback(null, resData);
+        })
+        .catch((err) => {
+          log.error("getThemePictures", err);
+          callback(err);
+        });
+    } catch (err) {
+      callback(err);
+    }
   };
 };
