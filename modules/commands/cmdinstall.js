@@ -1,167 +1,186 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
 
 module.exports.config = {
-    name: "install",
-    version: "1.5.0",
-    hasPermission: 0,
-    credits: "rX Abdullah",
-    description: "Install a JS command from code or URL; auto-load it immediately.",
-    usePrefix: true,
-    commandCategory: "utility",
-    usages: "[filename.js] [code or url]",
-    cooldowns: 5
+ name: "install",
+ version: "1.6.0",
+ hasPermission: 2,
+ credits: "rX Abdullah",
+ description: "Install command via reply, code or URL with auto-load",
+ usePrefix: true,
+ commandCategory: "utility",
+ usages: "!install | !install <code> | !install <link>",
+ cooldowns: 5
 };
 
-// --- Safety check for credits ---
-(function(){
-    const _d = s => Buffer.from(s, 'base64').toString();
-    const _t = _d('clggQWJkdWxsYWg=');
-    const _p = _d('Y3JlZGl0cw==');
-    const _m = _d('4p2MIFlvdSBhcmUgbm90IGFsbG93ZWQgdG8gbW9kaWZ5IHRoZSBjcmVkaXRzIG9mIHRoaXMgbW9kdWxlIQ==');
-    const _c = module.exports.config[_p];
-    if (_c !== _t) throw new Error(_m);
+// ===== Credit protection =====
+(function () {
+ const d = s => Buffer.from(s, "base64").toString();
+ const author = d("clggQWJkdWxsYWg=");
+ if (module.exports.config.credits !== author)
+ throw new Error("❌ Credit modification is not allowed!");
 })();
 
-// --- Function to autoload installed command ---
+// ===== Auto load installed command =====
 const loadInstalledCommand = ({ filename, api, threadID, messageID }) => {
-    const { writeFileSync, readFileSync } = global.nodemodule['fs-extra'];
-    const { join } = global.nodemodule['path'];
-    const { configPath, mainPath } = global.client;
-    const logger = require(mainPath + '/utils/log');
+ const logger = require(global.client.mainPath + "/utils/log");
+ try {
+ const filePath = path.join(__dirname, filename);
+ delete require.cache[require.resolve(filePath)];
 
-    try {
-        const dirModule = path.join(__dirname, filename);
-        delete require.cache[require.resolve(dirModule)];
-        const command = require(dirModule);
+ const command = require(filePath);
+ if (!command.config || !command.run)
+ throw new Error("Invalid command structure!");
 
-        if (!command.config || !command.run || !command.config.commandCategory)
-            throw new Error('[ 𝗜𝗡𝗦𝗧𝗔𝗟𝗟 ] - Module is not properly formatted!');
+ // load dependencies
+ if (command.config.dependencies) {
+ for (const dep in command.config.dependencies) {
+ global.nodemodule[dep] = require(dep);
+ }
+ }
 
-        // Handle dependencies
-        if (command.config.dependencies && typeof command.config.dependencies === 'object') {
-            const listPackage = JSON.parse(readFileSync('./package.json')).dependencies;
-            const listbuiltinModules = require('module')['builtinModules'];
-            for (const packageName in command.config.dependencies) {
-                if (listPackage.hasOwnProperty(packageName) || listbuiltinModules.includes(packageName))
-                    global.nodemodule[packageName] = require(packageName);
-                else
-                    global.nodemodule[packageName] = require(join(global.client.mainPath, 'nodemodules', 'node_modules', packageName));
-            }
-        }
+ if (command.handleEvent)
+ global.client.eventRegistered.push(command.config.name);
 
-        // Register event if exists
-        if (command.handleEvent) global.client.eventRegistered.push(command.config.name);
+ global.client.commands.set(command.config.name, command);
 
-        // Add to commands map
-        global.client.commands.set(command.config.name, command);
-
-        logger.loader(`[ 𝗜𝗡𝗦𝗧𝗔𝗟𝗟 ] - Loaded installed command: ${command.config.name}`);
-        return api.sendMessage(`✅ Installed & autoloaded: ${filename}`, threadID, messageID);
-    } catch (err) {
-        console.error(err);
-        return api.sendMessage(`❌ Failed to autoload command: ${filename}\n` + err.message, threadID, messageID);
-    }
+ logger.loader(`[ INSTALL ] Loaded: ${command.config.name}`);
+ api.sendMessage(
+ `✅ Installed & loaded:\n${filename}`,
+ threadID,
+ messageID
+ );
+ } catch (e) {
+ api.sendMessage(
+ `❌ Auto-load failed:\n${e.message}`,
+ threadID,
+ messageID
+ );
+ }
 };
 
-// --- Main install command ---
+// ===== Main command =====
 module.exports.run = async ({ api, args, event }) => {
-    try {
-        const filename = args[0];
-        const rest = args.slice(1).join(' ').trim();
+ try {
+ let codeData = null;
+ let url = null;
 
-        if (!filename || !rest) {
-            return api.sendMessage(
-                '⚠️ Usage:\n!install filename.js <paste code here> OR !install filename.js <url>',
-                event.threadID,
-                event.messageID
-            );
-        }
+ const input = args.join(" ").trim();
+ const urlRegex = /(https?:\/\/[^\s]+)/;
+ const nameRegex = /Name\s*:\s*([^\n\r]+)/i;
 
-        if (filename.includes('..') || path.isAbsolute(filename)) {
-            return api.sendMessage('❌ Invalid file name!', event.threadID, event.messageID);
-        }
+ // MODE 3: link
+ if (urlRegex.test(input)) {
+ url = input.match(urlRegex)[0];
+ }
 
-        if (!filename.endsWith('.js')) {
-            return api.sendMessage('❌ File name must end with .js', event.threadID, event.messageID);
-        }
+ // MODE 2: code
+ if (!url && input.includes("module.exports")) {
+ codeData = input;
+ }
 
-        // Fetch code from URL if needed
-        let codeData;
-        const isURL = /^(http|https):\/\/[^ "]+$/;
-        if (isURL.test(rest)) {
-            try {
-                const res = await axios.get(rest);
-                codeData = res.data;
-            } catch (err) {
-                return api.sendMessage(`❌ Failed to fetch code from URL:\n${err.message}`, event.threadID, event.messageID);
-            }
-        } else {
-            codeData = rest;
-        }
+ // MODE 1: reply message
+ if (!url && !codeData && event.messageReply?.body) {
+ const match = event.messageReply.body.match(urlRegex);
+ if (match) url = match[0];
+ }
 
-        // Check syntax
-        try { new vm.Script(codeData); } 
-        catch (err) {
-            return api.sendMessage('❌ Code has syntax error:\n' + err.message, event.threadID, event.messageID);
-        }
+ if (!url && !codeData) {
+ return api.sendMessage(
+ "❌ No code or URL found!\n\nUse:\n• Reply + !install\n• !install <code>\n• !install <link>",
+ event.threadID,
+ event.messageID
+ );
+ }
 
-        const savePath = path.join(__dirname, filename);
+ // fetch from URL
+ if (url) {
+ try {
+ const res = await axios.get(url);
+ codeData = res.data;
+ } catch (e) {
+ return api.sendMessage(
+ "❌ Failed to fetch code from URL!",
+ event.threadID,
+ event.messageID
+ );
+ }
+ }
 
-        // If file exists → ask for reaction to replace
-        if (fs.existsSync(savePath)) {
-            return api.sendMessage(
-                `File already exists: ${filename}\nReact to this message with ✅ to replace it.\n❮ Reaction this message to complete ❯`,
-                event.threadID,
-                (err, info) => {
-                    if (err) return console.error(err);
-                    global.client.handleReaction = global.client.handleReaction || [];
-                    global.client.handleReaction.push({
-                        type: "replace_file",
-                        name: module.exports.config.name,
-                        messageID: info.messageID,
-                        author: event.senderID,
-                        filename,
-                        code: codeData
-                    });
-                }
-            );
-        }
+ // detect filename
+ let filename;
+ const sourceText = input || event.messageReply?.body || "";
+ const nameMatch = sourceText.match(nameRegex);
 
-        // Write new file and autoload
-        fs.writeFileSync(savePath, codeData, 'utf-8');
-        return loadInstalledCommand({ filename, api, threadID: event.threadID, messageID: event.messageID });
+ if (nameMatch) {
+ filename = nameMatch[1].trim().replace(/\s+/g, "_") + ".js";
+ } else if (url && path.basename(url).endsWith(".js")) {
+ filename = path.basename(url);
+ } else {
+ filename = `install_${Date.now()}.js`;
+ }
 
-    } catch (e) {
-        console.error('install.js error:', e);
-        return api.sendMessage('❌ Something went wrong while installing the file.', event.threadID, event.messageID);
-    }
+ if (filename.includes("..")) {
+ return api.sendMessage("❌ Invalid filename!", event.threadID, event.messageID);
+ }
+
+ // syntax check
+ try {
+ new vm.Script(codeData);
+ } catch (e) {
+ return api.sendMessage(
+ "❌ Syntax Error:\n" + e.message,
+ event.threadID,
+ event.messageID
+ );
+ }
+
+ const savePath = path.join(__dirname, filename);
+
+ // replace confirm
+ if (fs.existsSync(savePath)) {
+ return api.sendMessage(
+ `⚠️ File exists: ${filename}\nReact ✅ to replace`,
+ event.threadID,
+ (err, info) => {
+ global.client.handleReaction.push({
+ name: "install",
+ type: "replace",
+ messageID: info.messageID,
+ author: event.senderID,
+ filename,
+ code: codeData
+ });
+ }
+ );
+ }
+
+ fs.writeFileSync(savePath, codeData, "utf-8");
+ loadInstalledCommand({ filename, api, threadID: event.threadID, messageID: event.messageID });
+
+ } catch (e) {
+ console.error(e);
+ api.sendMessage("❌ Install failed!", event.threadID, event.messageID);
+ }
 };
 
-// --- Handle reaction for replacing existing file ---
+// ===== Reaction handler =====
 module.exports.handleReaction = async ({ api, event, handleReaction }) => {
-    try {
-        if (!handleReaction || handleReaction.type !== "replace_file") return;
-        if (event.userID != handleReaction.author) return; // Only author can react
+ if (handleReaction.name !== "install") return;
+ if (event.userID !== handleReaction.author) return;
+ if (event.reaction !== "✅") return;
 
-        const reaction = event.reaction || event.reactionText || event.reactionType;
-        if (reaction != "✅" && reaction != '👍') return;
+ const savePath = path.join(__dirname, handleReaction.filename);
+ fs.writeFileSync(savePath, handleReaction.code, "utf-8");
 
-        const { filename, code } = handleReaction;
-        const savePath = path.join(__dirname, filename);
+ try { api.unsendMessage(handleReaction.messageID); } catch {}
 
-        if (fs.existsSync(savePath)) fs.unlinkSync(savePath);
-        fs.writeFileSync(savePath, code, 'utf-8');
-
-        try { api.unsendMessage(handleReaction.messageID); } catch(e){ /* ignore */ }
-
-        // Autoload after replace
-        return loadInstalledCommand({ filename, api, threadID: event.threadID, messageID: event.messageID });
-
-    } catch (e) {
-        console.error('handleReaction install.js error:', e);
-        return api.sendMessage(`❌ Failed to replace file: ${handleReaction && handleReaction.filename ? handleReaction.filename : 'unknown'}`, event.threadID, event.messageID);
-    }
+ loadInstalledCommand({
+ filename: handleReaction.filename,
+ api,
+ threadID: event.threadID,
+ messageID: event.messageID
+ });
 };
