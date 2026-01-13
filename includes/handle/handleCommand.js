@@ -5,6 +5,32 @@ const moment = require("moment-timezone");
 const logger = require("../../utils/log.js");
 const axios = require("axios");
 
+// =======================
+// Helper: Full name mention detection
+// =======================
+async function getUIDByFullName(api, threadID, body) {
+  if (!body.includes("@")) return null;
+
+  const match = body.match(/@(.+)/);
+  if (!match) return null;
+
+  const targetName = match[1].trim().toLowerCase().replace(/\s+/g, " ");
+
+  const threadInfo = await api.getThreadInfo(threadID);
+  const users = threadInfo.userInfo || [];
+
+  const user = users.find(u => {
+    if (!u.name) return false;
+    const fullName = u.name.trim().toLowerCase().replace(/\s+/g, " ");
+    return fullName === targetName;
+  });
+
+  return user ? user.id : null;
+}
+
+// =======================
+// Main handler
+// =======================
 module.exports = function ({ api, models, Users, Threads, Currencies }) {
   // ===== VIP helpers =====
   const vipFilePath = path.join(__dirname, "../../modules/commands/rx/vip.json");
@@ -31,81 +57,61 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
     const { userBanned, threadBanned, threadInfo, threadData, commandBanned } = global.data;
     const { commands, cooldowns } = global.client;
 
-    let { body, senderID, threadID, messageID } = event;
+    let { body, senderID, threadID, messageID, mentions, type, messageReply } = event;
     senderID = String(senderID);
     threadID = String(threadID);
     body = body || "x";
 
     const threadSetting = threadData.get(threadID) || {};
     const threadPrefix = threadSetting.PREFIX || PREFIX;
-
     const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const prefixRegex = new RegExp(`^(<@!?${senderID}>|${escapeRegex(threadPrefix)})\\s*`);
 
     let args = [];
     let commandName = "";
-
     const prefixUsed = body.startsWith(threadPrefix);
 
-    // === Load VIP data before using ===
+    // Load VIP data
     const vipList = loadVIP();
     const vipMode = loadVIPMode();
     const isVIP = vipList.includes(senderID);
 
-  // ADMIN or VIP → can use without prefix
-  if ((ADMINBOT.includes(senderID) || isVIP) && !prefixUsed) {
-    const temp = body.trim().split(/ +/);
-    commandName = temp.shift()?.toLowerCase();
-    args = temp;
-     } else {
-   if (!prefixRegex.test(body)) return;
-    const [matchedPrefix] = body.match(prefixRegex);
-    const argsTemp = body.slice(matchedPrefix.length).trim().split(/ +/);
-    commandName = argsTemp.shift()?.toLowerCase();
-    args = argsTemp;
-      }
-
-    if (!commandName) {
-      return api.sendMessage(global.getText("handleCommand", "onlyprefix"), threadID, messageID);
+    // ADMIN or VIP → can use without prefix
+    if ((ADMINBOT.includes(senderID) || isVIP) && !prefixUsed) {
+      const temp = body.trim().split(/ +/);
+      commandName = temp.shift()?.toLowerCase();
+      args = temp;
+    } else {
+      if (!prefixRegex.test(body)) return;
+      const [matchedPrefix] = body.match(prefixRegex);
+      const argsTemp = body.slice(matchedPrefix.length).trim().split(/ +/);
+      commandName = argsTemp.shift()?.toLowerCase();
+      args = argsTemp;
     }
-    
+
+    if (!commandName) return api.sendMessage(global.getText("handleCommand", "onlyprefix"), threadID, messageID);
+
+    // Resolve aliases
     for (const [cmdName, cmdObj] of commands) {
       if (cmdObj.config.aliases && cmdObj.config.aliases.includes(commandName)) {
-        commandName = cmdName; 
+        commandName = cmdName;
         break;
       }
     }
 
     let command = commands.get(commandName);
-
     if (!command && prefixUsed) {
       const allCommandName = Array.from(commands.keys());
       const checker = stringSimilarity.findBestMatch(commandName, allCommandName);
-      if (checker.bestMatch.rating >= 0.5) {
-        command = commands.get(checker.bestMatch.target);
-      } else {
-        return api.sendMessage(
-          global.getText("handleCommand", "commandNotExist", checker.bestMatch.target),
-          threadID,
-          messageID
-        );
-      }
+      if (checker.bestMatch.rating >= 0.5) command = commands.get(checker.bestMatch.target);
+      else return api.sendMessage(global.getText("handleCommand", "commandNotExist", checker.bestMatch.target), threadID, messageID);
     }
-
     if (!command && !prefixUsed) return;
-
     if (!command) {
       const allCommandName = Array.from(commands.keys());
       const checker = stringSimilarity.findBestMatch(commandName, allCommandName);
-      if (checker.bestMatch.rating >= 0.5) {
-        command = commands.get(checker.bestMatch.target);
-      } else {
-        return api.sendMessage(
-          global.getText("handleCommand", "commandNotExist", checker.bestMatch.target),
-          threadID,
-          messageID
-        );
-      }
+      if (checker.bestMatch.rating >= 0.5) command = commands.get(checker.bestMatch.target);
+      else return api.sendMessage(global.getText("handleCommand", "commandNotExist", checker.bestMatch.target), threadID, messageID);
     }
 
     // ===== Banned check =====
@@ -129,7 +135,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
     }
 
     // ===== VIP Mode Check =====
-      if (!ADMINBOT.includes(senderID)) {
+    if (!ADMINBOT.includes(senderID)) {
       if (vipMode && !vipList.includes(senderID)) {
         return api.sendMessage("> ❌\nOnly VIP users can use this command", threadID, messageID);
       }
@@ -137,8 +143,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
 
     // ===== Permission Check =====
     let permssion = 0;
-    const threadInfoo =
-      threadInfo.get(threadID) || (await Threads.getInfo(threadID));
+    const threadInfoo = threadInfo.get(threadID) || (await Threads.getInfo(threadID));
     const find = threadInfoo.adminIDs.find(el => el.id == senderID);
 
     if (NDH.includes(senderID)) permssion = 2;
@@ -146,11 +151,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
     else if (find) permssion = 1;
 
     if (command.config.hasPermssion > permssion) {
-      return api.sendMessage(
-        global.getText("handleCommand", "permissionNotEnough", command.config.name),
-        threadID,
-        messageID
-      );
+      return api.sendMessage(global.getText("handleCommand", "permissionNotEnough", command.config.name), threadID, messageID);
     }
 
     // ===== Cooldown Check =====
@@ -189,6 +190,10 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
         permssion,
         getText: getText2,
       };
+
+      // ✅ Full name mention detection
+      const uid = await getUIDByFullName(api, event.threadID, event.body);
+      if (uid) Obj.mentionedUID = uid;
 
       command.run(Obj);
       timestamps.set(senderID, dateNow);
