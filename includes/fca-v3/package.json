@@ -1,12 +1,12 @@
 {
-  "name": "fca-horizon-remastered",
+  "name": "rXfca-v3",
   "version": "1.5.2",
-  "description": "Facebook-chat-api protect and deploy by Kanzu and HZI Team",
+  "description": "Facebook-chat-api protect and deploy by rX",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
-  "author": "Avery, David, Maude, Benjamin, UIRI, KanzuWakazaki",
+  "author": "Avery, David, Maude, Benjamin, rX, UIRI, KanzuWakazaki",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/KanzuXHorizon/Fca-Horizon-Remastered/issues"
@@ -86,9 +86,9 @@
     }
   },
   "keywords": [
-    "Fca horizon",
+    "Fca rX",
     "fca-horizon-remastered",
-    "horizon fca",
+    "rX fca",
     "horizon"
   ]
 }
