@@ -238,9 +238,8 @@ module.exports = function(defaultFuncs, api, ctx) {
                       Data: tempThreadInf
                   });
           })
-          .catch((err) => { 
-              // Return error object instead of rejecting to prevent unhandled rejection
-              return resolve({ Success: false, Data: '', error: err?.message || 'Unknown error' });
+          .catch(() => { 
+              reject({ Success: false, Data: '' }) 
           });
       })
   

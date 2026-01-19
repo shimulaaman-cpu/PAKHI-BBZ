@@ -20,7 +20,7 @@ module.exports = function (defaultFuncs, api, ctx) {
       var { getInfo } = require('../Extra/ExtraAddons');
       getInfo(id,ctx.jar,ctx,defaultFuncs)
         .then(data => {
-          //api.PriyanshFca_Data([data], "Users", "Post");
+          //api.Horizon_Data([data], "Users", "Post");
         return callback(null, data);
       });
     }
