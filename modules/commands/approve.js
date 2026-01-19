@@ -2,147 +2,93 @@ const fs = require("fs");
 const path = require("path");
 
 module.exports.config = {
-  name: "approve",
-  version: "1.8",
-  hasPermssion: 2,
-  credits: "rX",
-  description: "Approve group, show list & reply number to remove",
-  commandCategory: "Admin",
-  usages: "!approve <tid> <2day/2month/2year> | !approve box",
-  cooldowns: 5,
+ name: "approve",
+ version: "2.2",
+ hasPermssion: 2,
+ credits: "rX",
+ description: "Approve current group with optional duration",
+ commandCategory: "Admin",
+ usages: "!approve [1minute/1hour/2day/1month/1year] | !approve box | !approve all <period>",
+ cooldowns: 5,
 };
 
 const DATA_PATH = path.join(__dirname, "data", "thuebot.json");
 
-// ===== DATE FORMAT =====
 const formatDate = (d) =>
-  `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
+ `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
 const parseDate = (str) => {
-  const [dd, mm, yy] = str.split("/").map(Number);
-  return new Date(yy, mm - 1, dd);
+ const [dd, mm, yy] = str.split("/").map(Number);
+ return new Date(yy, mm-1, dd);
 };
 
 // ===== MAIN =====
 module.exports.run = async ({ api, event, args }) => {
+ const threadID = event.threadID;
 
-  // ===== REPLY REMOVE MODE =====
-  if (
-    event.messageReply &&
-    event.messageReply.body &&
-    event.messageReply.body.includes("𝐀𝐏𝐏𝐑𝐎𝐕𝐄𝐃 𝐆𝐑𝐎𝐔𝐏𝐒")
-  ) {
-    const index = parseInt(args[0]) - 1;
+ // ===== BOX MODE =====
+ if (args[0] === "box") {
+ if (!fs.existsSync(DATA_PATH)) return api.sendMessage("❌ No approved group found!", threadID);
+ const data = JSON.parse(fs.readFileSync(DATA_PATH,"utf8"));
+ if (!data.length) return api.sendMessage("❌ No approved group found!", threadID);
 
-    if (isNaN(index))
-      return api.sendMessage("❌ Only number allowed!", event.threadID);
+ let msg = "╭─‣ 𝐀𝐏𝐏𝐑𝐎𝐕𝐄𝐃 𝐆𝐑𝐎𝐔𝐏𝐒\n";
+ msg += `├‣ 𝐓𝐎𝐓𝐀𝐋 : ${data.length}\n`;
+ msg += "╰────────────◊\n";
 
-    if (!fs.existsSync(DATA_PATH))
-      return api.sendMessage("❌ No approved group found!", event.threadID);
+ data.forEach((g,i)=>{
+ const start = parseDate(g.time_start);
+ const end = parseDate(g.time_end);
+ const remain = Math.max(0, Math.ceil((end - new Date()) / (1000*60*60*24)));
 
-    let data = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
+ msg += `╭─‣ ${i+1}. 𝐓𝐈𝐃 : ${g.t_id}\n`;
+ msg += `├‣ type : ${g.user || "Everyone"}\n`;
+ msg += `├‣ start date : ${g.time_start}\n`;
+ msg += `├‣ end date : ${g.time_end}\n`;
+ msg += `├‣ remaining day : ${remain}\n╰────────────◊\n`;
+ });
 
-    if (index < 0 || index >= data.length)
-      return api.sendMessage("❌ Invalid number!", event.threadID);
+ return api.sendMessage(msg, threadID);
+ }
 
-    const removed = data.splice(index, 1)[0];
-    fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
+ // ===== SINGLE APPROVE MODE =====
+ let durationArg = args[0] || "7day"; // default 7 days
+ let match = durationArg.match(/^(\d+)(minute|hour|day|month|year)$/i);
 
-    return api.sendMessage(
-      `✅ Approved Group Removed\n\nTID : ${removed.t_id}`,
-      event.threadID
-    );
-  }
+ let num, unit;
+ if(match){
+ num = parseInt(match[1]);
+ unit = match[2].toLowerCase();
+ } else {
+ // fallback default
+ num = 7;
+ unit = "day";
+ }
 
-  // ===== BOX MODE =====
-  if (args[0] === "box") {
-    if (!fs.existsSync(DATA_PATH))
-      return api.sendMessage("❌ No approved group found!", event.threadID);
+ const start = new Date();
+ const end = new Date();
 
-    const data = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
-    if (!data.length)
-      return api.sendMessage("❌ No approved group found!", event.threadID);
+ switch(unit){
+ case "minute": end.setMinutes(end.getMinutes() + num); break;
+ case "hour": end.setHours(end.getHours() + num); break;
+ case "day": end.setDate(end.getDate() + num); break;
+ case "month": end.setMonth(end.getMonth() + num); break;
+ case "year": end.setFullYear(end.getFullYear() + num); break;
+ default: end.setDate(end.getDate() + 7); // fallback
+ }
 
-    let msg = "";
-    msg += "╭─‣ 𝐀𝐏𝐏𝐑𝐎𝐕𝐄𝐃 𝐆𝐑𝐎𝐔𝐏𝐒\n";
-    msg += `├‣ 𝐓𝐎𝐓𝐀𝐋 : ${data.length}\n`;
-    msg += "├‣ 𝐫𝐗 × 𝐌𝐚𝐫𝐢𝐚 𝐯𝟑\n";
-    msg += "╰────────────◊\n";
-    msg += "  ─────×\n";
+ let data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH,"utf8")) : [];
 
-    data.forEach((g, i) => {
-      const start = parseDate(g.time_start);
-      const end = parseDate(g.time_end);
-      const now = new Date();
-      const remain = Math.max(
-        0,
-        Math.ceil((end - now) / (1000 * 60 * 60 * 24))
-      );
+ if(data.find(e=>e.t_id === threadID)) return api.sendMessage("❌ This group is already approved!", threadID);
 
-      msg += `╭─‣ ${i + 1}. 𝐓𝐈𝐃 : ${g.t_id}\n`;
-      msg += `├‣ type : ${g.user || "Everyone"}\n`;
-      msg += `├‣ start date : ${g.time_start}\n`;
-      msg += `├‣ end date : ${g.time_end}\n`;
-      msg += `├‣ remaining day : ${remain}\n`;
-      msg += "╰────────────◊\n";
-      msg += "  ─────×\n";
-    });
+ data.push({
+ t_id: threadID,
+ user: "Everyone",
+ time_start: formatDate(start),
+ time_end: formatDate(end),
+ });
 
-    msg += "\n💡 Reply this message with number (1,2,3...) to remove";
+ fs.writeFileSync(DATA_PATH, JSON.stringify(data,null,2));
 
-    return api.sendMessage(msg.trim(), event.threadID);
-  }
-
-  // ===== ADD MODE =====
-  if (args.length < 2)
-    return api.sendMessage(
-      "Usage:\n!approve <tid> <2day/2month/2year>\n!approve box",
-      event.threadID
-    );
-
-  const tid = args[0];
-  const period = args[1].toLowerCase();
-  const match = period.match(/^(\d+)(day|month|year)$/);
-
-  if (!match)
-    return api.sendMessage(
-      "❌ Invalid format! Example: 2day / 3month / 1year",
-      event.threadID
-    );
-
-  const num = parseInt(match[1]);
-  const unit = match[2];
-
-  const start = new Date();
-  const end = new Date();
-
-  if (unit === "day") end.setDate(end.getDate() + num);
-  if (unit === "month") end.setMonth(end.getMonth() + num);
-  if (unit === "year") end.setFullYear(end.getFullYear() + num);
-
-  let data = [];
-  if (fs.existsSync(DATA_PATH)) {
-    data = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
-  }
-
-  if (data.find((e) => e.t_id === tid))
-    return api.sendMessage("❌ This group already approved!", event.threadID);
-
-  data.push({
-    t_id: tid,
-    user: "Everyone",
-    time_start: formatDate(start),
-    time_end: formatDate(end),
-  });
-
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
-
-  api.sendMessage(
-    `✅ Group Approved!\n\nTID : ${tid}\nFrom : ${formatDate(
-      start
-    )}\nTo : ${formatDate(end)}`,
-    event.threadID
-  );
+ return api.sendMessage(`✅ Group Approved!\n\nTID: ${threadID}\nFrom: ${formatDate(start)}\nTo: ${formatDate(end)}`, threadID);
 };
