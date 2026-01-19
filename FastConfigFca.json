@@ -1,9 +1,9 @@
 {
-	"Language": "en",
+	"Language": "vi",
 	"PreKey": "",
 	"AutoUpdate": true,
 	"MainColor": "#9900FF",
-	"MainName": "[ FCA-MARIA ]",
+	"MainName": "[ FCA-HZI ]",
 	"Uptime": false,
 	"Config": "default",
 	"DevMode": false,
@@ -30,7 +30,7 @@
 	"AntiGetInfo": {
 		"Database_Type": "default",
 		"AntiGetThreadInfo": true,
-		"AntiGetUserInfo": false
+		"AntiGetUserInfo": true
 	},
 	"Stable_Version": {
 		"Accept": false,
@@ -50,7 +50,7 @@
 		},
 		"LogFile": {
 			"Use": false,
-			"Explain": "Record memory usage logs to fix errors. Default location: Maria_Database/memory.logs"
+			"Explain": "Record memory usage logs to fix errors. Default location: Horizon_Database/memory.logs"
 		}
 	}
 }
