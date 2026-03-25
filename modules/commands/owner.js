@@ -15,6 +15,29 @@ module.exports.config = {
 };
 
 module.exports.run = async function({ api, event }) {
+
+    // 🔥 Loading Animation Start
+    const loadingFrames = [
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■□□□□□□□□□] 10%",
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■■■□□□□□□□] 30%",
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■■■■■□□□□□] 50%",
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■■■■■■■□□□] 70%",
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■■■■■■■■■□] 90%",
+        "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙋𝙧𝙚𝙛𝙞𝙭...\n[■■■■■■■■■■] 100%"
+    ];
+
+    let msg = await api.sendMessage(loadingFrames[0], event.threadID);
+
+    for (let i = 1; i < loadingFrames.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await api.unsendMessage(msg.messageID);
+        msg = await api.sendMessage(loadingFrames[i], event.threadID);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await api.unsendMessage(msg.messageID);
+    // 🔥 Loading Animation End
+
     var time = moment().tz("Asia/Dhaka").format("DD/MM/YYYY hh:mm:ss A");
 
     var callback = () => api.sendMessage({
