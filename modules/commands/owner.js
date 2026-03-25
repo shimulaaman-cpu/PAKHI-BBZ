@@ -7,7 +7,7 @@ module.exports.config = {
     name: "owner",
     version: "1.0.0",
     hasPermssion: 0,
-    credits: "rX Abdullah", //don't change my credit 
+    credits: "rX Abdullah",
     description: "Show Owner Info",
     commandCategory: "Admin",
     usages: "",
@@ -16,7 +16,6 @@ module.exports.config = {
 
 module.exports.run = async function({ api, event }) {
 
-    // 🔥 Loading Animation Start
     const loadingFrames = [
         "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙄𝙣𝙛𝙤...\n[■□□□□□□□□□] 10%",
         "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙄𝙣𝙛𝙤...\n[■■■□□□□□□□] 30%",
@@ -26,18 +25,27 @@ module.exports.run = async function({ api, event }) {
         "𝙇𝙤𝙖𝙙𝙞𝙣𝙜 𝙄𝙣𝙛𝙤...\n[■■■■■■■■■■] 100%"
     ];
 
+    // 🔥 first message
     let msg = await api.sendMessage(loadingFrames[0], event.threadID);
 
     for (let i = 1; i < loadingFrames.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 500));
-        await api.unsendMessage(msg.messageID);
-        msg = await api.sendMessage(loadingFrames[i], event.threadID);
+
+        // same message replace feel
+        await api.editMessage 
+        ? api.editMessage(loadingFrames[i], msg.messageID)
+        : async function () {
+            await api.unsendMessage(msg.messageID);
+            msg = await api.sendMessage(loadingFrames[i], event.threadID);
+        }();
     }
 
     await new Promise(resolve => setTimeout(resolve, 500));
-    await api.unsendMessage(msg.messageID);
-    // 🔥 Loading Animation End
 
+    // 🔥 remove loading msg
+    await api.unsendMessage(msg.messageID);
+
+    // ================= ORIGINAL CODE =================
     var time = moment().tz("Asia/Dhaka").format("DD/MM/YYYY hh:mm:ss A");
 
     var callback = () => api.sendMessage({
