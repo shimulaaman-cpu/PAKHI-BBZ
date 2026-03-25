@@ -1,32 +1,17 @@
-<br><br>
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=rxmaria761&langs_count=8&theme=react&bg_color=151515" />
+  <a href="####"><img src="http://readme-typing-svg.herokuapp.com?color=cyan&center=true&vCenter=true&multiline=false&lines=`❀ 𝗣𝗔𝗞𝗛𝗜 𝗕𝗕𝗭 ❀ `" alt="">
 </p>
-<p align="center">
-<a href="https://github.com/rxmaria761"><img alt="MARIA BOT Github Stats"
-    src="https://github-readme-stats.vercel.app/api?username=rxmaria761&show_icons=true&count_private=true&theme=react&bg_color=151515" /></a>
-<p align="center"><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=rxmaria761&theme=black-ice"
-    alt="rX Abdullah"/></p>
-
-<br/>
-
 
 <br />
 <p align="center">
     <a href="https://github.com/rxabdullah007/Maria-v3">
-        <img src="https://i.imgur.com/I0kvVfu.jpeg" alt="Logo">
+        <img src="https://i.imgur.com/oEh5VEx.jpeg" alt="Logo">
     </a>
 
-<h3 align="center">MARIA CHATBOT</h3>
+<h3 align="center">✦ 𝗞𝗔𝗞𝗔𝗦𝗛𝗜 𝗛𝗔𝗧𝗔𝗞𝗘 ✦</h3>
 
 <p align="center">
-    A simple Facebook Messenger Bot made by me (rX Abdullah).
-    <br />
-    <br />
-    <a href="https://github.com/rxabdullah007/Maria-v3/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/rxabdullah007/Maria-v3/pulls">Request Feature</a>
-    </p>
+    A simple Facebook Messenger Bot made by me (Kakashi).
 </p>
 
 <p align="center">
@@ -75,7 +60,7 @@ This project is licensed under the GNU General Public License v3.0 or later - se
 ### 1. Repository Clone Karein
 
 ```bash
-https://github.com/rxabdullah007/Maria-v3.git
+https://github.com/hridoyhossen48360/TORU-CHAN-.git
 ```
 
 ### 2. Dependencies Installed
@@ -107,10 +92,10 @@ node index.js
 - You can use available commands like:
 
 ```
-!help
-!up
-!song [name]
-!info
+.help
+.up
+.song [name]
+.info
 
 ```
 # No Prefix system for admins
@@ -137,19 +122,18 @@ info
 
 ## 👨‍💻 Owner Info
 
-**Name:** RX Abdullah  
-**Age:** 17+  
+**Name:** Kakashi Hatake
+**Age:** 20+
 **Class:** Intermediate  
-**Lives in:** Mohammadpur, Dhaka  
-**Born in:** Rajshahi  
-**Hobbies:** Coding, Riding Bikes  
-**Fav Bike:** KTM RC
+**Lives in:** Jashore, Bangladesh 
+**Born in:** Satkhira 
+**Hobbies:** Grouping, Adventure 
 
 ---
 
 
 
-🔗 Messenger: [Message RX Abdullah](https://m.me/rxabdullah007)
+🔗 Messenger: [Message Kakashi](https://m.me/100048786044500)
 
 ---
 
@@ -160,10 +144,10 @@ info
 
 ## ✨ OWNAR PHOTO
 
-![Preview](https://i.postimg.cc/nhxxB67n/IMG-0793.jpg)
+![Preview](https://i.imgur.com/oEh5VEx.jpeg)
 
 ---
 
 ## 💬 Thanks for visiting!
 
-Made with 💚 by **RX Abdullah**
+Made with 💚 by **Kakashi**
