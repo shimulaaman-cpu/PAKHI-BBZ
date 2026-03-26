@@ -4,7 +4,7 @@ module.exports.config = {
 	hasPermssion: 2,
 	credits: "rX",
 	description: "Delete cache file/folder",
-	commandCategory: "system",
+	commandCategory: "System",
 	usages: "",
 	cooldowns: 2
 };
