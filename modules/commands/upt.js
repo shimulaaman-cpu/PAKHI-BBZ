@@ -1,114 +1,108 @@
-const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
+const request = require("request");
+const Canvas = require("canvas");
+const moment = require("moment-timezone");
 
 module.exports.config = {
   name: "up",
-  version: "2.0.1",
+  version: "2.0.0",
   hasPermssion: 0,
-  credits: "rX",
-  usePrefix: true,
-  description: "Neon Bot Status Image",
-  commandCategory: "System",
+  credits: "HRIDOY",
+  description: "Show bot uptime on a stylish background",
+  commandCategory: "Admin",
   usages: "",
-  cooldowns: 5,
+  cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event }) {
-  try {
-    // 🖼 Background
-    const bgPath = path.join(__dirname, "noprefix", "status_bg.png");
-    const bg = await loadImage(bgPath);
+module.exports.run = async function ({ api, event, Users, Threads }) {
+  const { threadID } = event;
 
-    const canvas = createCanvas(bg.width, bg.height);
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  // ⏱ Bot stats
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const seconds = Math.floor(uptime % 60);
 
-    // 🌑 Dark overlay
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const totalUsers = global.data.allUserID.length;
+  const totalThreads = global.data.allThreadID.length;
 
-    // 🟦 Neon frame
-    ctx.strokeStyle = "#00fff0";
-    ctx.lineWidth = 6;
-    ctx.shadowColor = "#00fff0";
-    ctx.shadowBlur = 25;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+  const timeNow = moment.tz("Asia/Dhaka").format("DD/MM/YYYY HH:mm:ss");
 
-    // ⏱ Uptime
-    const uptime = process.uptime();
-    const h = Math.floor(uptime / 3600);
-    const m = Math.floor((uptime % 3600) / 60);
-    const s = Math.floor(uptime % 60);
-    const ping = Date.now() - event.timestamp;
-    const owner = "rX";
+  // 🌄 Random background
+  const backgrounds = [
+    "https://i.ibb.co/0yxzRmvR/image0.jpg",
+    "https://i.ibb.co/hFKjhgVQ/image0.jpg",
+    "https://i.ibb.co/gZgzQKcV/image0.jpg",
+    "https://i.ibb.co/rRMGWq3R/image0.jpg",
+    "https://i.ibb.co/cc2JtrRY/image0.jpg",
+    "https://i.ibb.co/qFDRJ9VN/image0.jpg"
+  ];
+  const bgLink = backgrounds[Math.floor(Math.random() * backgrounds.length)];
 
-    // 🔤 Text base
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "#00eaff";
-    ctx.shadowBlur = 18;
+  // 🖌 Load background
+  const cacheDir = path.join(__dirname, "cache");
+  if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-    // ⚡ Title
-    ctx.font = "bold 60px Sans";
-    ctx.fillText("BOT STATUS", 80, 110);
+  const bgPath = path.join(cacheDir, "bg.jpg");
+  await new Promise((resolve, reject) => {
+    request(bgLink)
+      .pipe(fs.createWriteStream(bgPath))
+      .on("close", resolve)
+      .on("error", reject);
+  });
 
-    // Divider line
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(80, 135);
-    ctx.lineTo(canvas.width - 80, 135);
-    ctx.stroke();
+  // 🎨 Canvas
+  const canvas = Canvas.createCanvas(900, 500);
+  const ctx = canvas.getContext("2d");
 
-    // 📍 Positions
-    const iconX = 80;
-    const textX = 150;
-    const y1 = 210;
-    const y2 = 290;
-    const y3 = 370;
+  const background = await Canvas.loadImage(bgPath);
+  ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-    ctx.font = "bold 40px Sans";
+  // 🔹 Dark overlay for readability
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 🧠 Text
-    ctx.fillText(`${h}h ${m}m ${s}s`, textX, y1);
-    ctx.fillText(`${ping} ms`, textX, y2);
-    ctx.fillText(owner, textX, y3);
+  // 🔹 Text settings
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 3;
+  ctx.font = "bold 36px Sans-serif";
 
-    // 🔹 Labels
-    ctx.font = "24px Sans";
-    ctx.fillText("UPTIME", textX, y1 - 35);
-    ctx.fillText("PING", textX, y2 - 35);
-    ctx.fillText("OWNER", textX, y3 - 35);
+  const lines = [
+    "🤖 BOT STATUS",
+    `Time       : ${timeNow}`,
+    `Uptime     : ${hours}h ${minutes}m ${seconds}s`,
+    `Total Groups: ${totalThreads}`,
+    `Total Users : ${totalUsers}`
+  ];
 
-    // 🧩 Icons
-    const iconClock = await loadImage("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/23f1.png");
-    const iconSignal = await loadImage("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4f6.png");
-    const iconCrown = await loadImage("https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f451.png");
-
-    ctx.shadowBlur = 0;
-    ctx.drawImage(iconClock, iconX, y1 - 55, 48, 48);
-    ctx.drawImage(iconSignal, iconX, y2 - 55, 48, 48);
-    ctx.drawImage(iconCrown, iconX, y3 - 55, 48, 48);
-
-    // 🪪 Footer
-    ctx.font = "20px Sans";
-    ctx.fillStyle = "#aefcff";
-    ctx.fillText("Thanks for using pakhi bbz", canvas.width - 280, canvas.height - 40);
-
-    // 💾 Save
-    const outPath = path.join(__dirname, "cache", `upt_${event.senderID}.png`);
-    fs.writeFileSync(outPath, canvas.toBuffer("image/png"));
-
-    // 📤 Send
-    return api.sendMessage(
-      { attachment: fs.createReadStream(outPath) },
-      event.threadID,
-      () => fs.unlinkSync(outPath),
-      event.messageID
-    );
-
-  } catch (err) {
-    console.error(err);
-    return api.sendMessage("❌ Status image generate failed!", event.threadID, event.messageID);
+  let y = 70;
+  for (const line of lines) {
+    ctx.strokeText(line, 40, y);
+    ctx.fillText(line, 40, y);
+    y += 60;
   }
+
+  // 🔹 Footer / signature
+  ctx.font = "italic 24px Sans-serif";
+  ctx.fillStyle = "#FFD700";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 2;
+  ctx.strokeText("— Powered by TORU CHAN", 40, canvas.height - 30);
+  ctx.fillText("— Powered by TORU CHAN", 40, canvas.height - 30);
+
+  // 💾 Save final image
+  const outPath = path.join(cacheDir, "up.jpg");
+  fs.writeFileSync(outPath, canvas.toBuffer());
+
+  // 📤 Send message
+  api.sendMessage(
+    {
+      body: "📊 Bot Uptime & Stats",
+      attachment: fs.createReadStream(outPath)
+    },
+    threadID,
+    () => fs.unlinkSync(outPath)
+  );
 };
